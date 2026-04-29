@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MP3 Player with Album Art</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsmediatags@4.0.1/dist/jsmediatags.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .album-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        #albumArt {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        #albumArt.show {
+            display: block;
+        }
+        
+        .placeholder {
+            width: 300px;
+            height: 300px;
+            background-color: #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            margin: 0 auto;
+        }
+        
+        .placeholder.hide {
+            display: none;
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+        }
+        
+        .info-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 MP3 Player with Album Art</h1>
+        
+        <div class="input-group">
+            <input type="file" id="mp3File" accept=".mp3" />
+        </div>
+        
+        <div class="album-container">
+            <div class="placeholder" id="placeholder">No album art found</div>
+            <img id="albumArt" alt="Album Art" />
+        </div>
+        
+        <audio id="audioPlayer" controls>
+            <source id="audioSource" src="./one.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <div class="info" id="infoBox" style="display: none;">
+            <div class="info-item"><span class="info-label">Title:</span> <span id="title">N/A</span></div>
+            <div class="info-item"><span class="info-label">Artist:</span> <span id="artist">N/A</span></div>
+            <div class="info-item"><span class="info-label">Album:</span> <span id="album">N/A</span></div>
+            <div class="info-item"><span class="info-label">Year:</span> <span id="year">N/A</span></div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('mp3File');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioSource = document.getElementById('audioSource');
+        const albumArt = document.getElementById('albumArt');
+        const placeholder = document.getElementById('placeholder');
+        const infoBox = document.getElementById('infoBox');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Set the audio source
+            const fileURL = URL.createObjectURL(file);
+            audioSource.src = fileURL;
+            audioPlayer.load();
+
+            // Read ID3 tags
+            jsmediatags.read(file, {
+                onSuccess: function(tag) {
+                    const tags = tag.tags;
+                    
+                    // Display metadata
+                    document.getElementById('title').textContent = tags.title || 'N/A';
+                    document.getElementById('artist').textContent = tags.artist || 'N/A';
+                    document.getElementById('album').textContent = tags.album || 'N/A';
+                    document.getElementById('year').textContent = tags.year || 'N/A';
+                    infoBox.style.display = 'block';
+
+                    // Extract and display album art
+                    if (tags.picture) {
+                        const picture = tags.picture;
+                        let imageUrl;
+                        
+                        try {
+                            // Convert Uint8Array to base64
+                            const bytes = picture.data;
+                            let binary = '';
+                            for (let i = 0; i < bytes.byteLength; i++) {
+                                binary += String.fromCharCode(bytes[i]);
+                            }
+                            const base64 = btoa(binary);
+                            imageUrl = `data:${picture.format};base64,${base64}`;
+                            
+                            albumArt.src = imageUrl;
+                            albumArt.classList.add('show');
+                            placeholder.classList.add('hide');
+                        } catch (err) {
+                            console.error('Error processing album art:', err);
+                            placeholder.classList.remove('hide');
+                            albumArt.classList.remove('show');
+                        }
+                    } else {
+                        placeholder.classList.remove('hide');
+                        albumArt.classList.remove('show');
+                    }
+                },
+                onError: function(error) {
+                    console.log('Error reading tags:', error);
+                    placeholder.classList.remove('hide');
+                    albumArt.classList.remove('show');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
